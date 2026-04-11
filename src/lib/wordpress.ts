@@ -175,6 +175,15 @@ const POST_FIELDS = gql`
         slug
       }
     }
+    seo {
+      title
+      metaDesc
+      opengraphTitle
+      opengraphDescription
+      opengraphImage {
+        sourceUrl
+      }
+    }
   }
 `;
 
@@ -487,24 +496,14 @@ export const getRelatedPosts = async (
 export const getSiteCounts = async (wpUrl: string): Promise<{ posts: number; pages: number; categories: number }> => {
   // Construct REST API base URL
   const baseUrl = wpUrl.replace(/\/graphql\/?$/, '').replace(/\/$/, '');
-  const log = (msg: string) => {
-    console.log(`[SiteCounts] ${msg}`);
-  };
-
-  log(`Starting REST API count for ${baseUrl}`);
 
   const getCount = async (endpoint: string): Promise<number> => {
     try {
       const res = await fetch(`${baseUrl}/wp-json/wp/v2/${endpoint}?per_page=1`);
-      if (!res.ok) {
-        log(`Failed to fetch ${endpoint}: ${res.status} ${res.statusText}`);
-        return 0;
-      }
+      if (!res.ok) return 0;
       const total = res.headers.get('x-wp-total');
-      log(`Fetched ${endpoint}: Total=${total}`);
       return total ? parseInt(total, 10) : 0;
     } catch (e) {
-      log(`Error fetching ${endpoint}: ${e instanceof Error ? e.message : String(e)}`);
       return 0;
     }
   };
@@ -517,7 +516,6 @@ export const getSiteCounts = async (wpUrl: string): Promise<{ posts: number; pag
     ]);
     return { posts, pages, categories };
   } catch (error) {
-    log(`Fatal Error in getSiteCounts: ${error instanceof Error ? error.message : String(error)}`);
     return { posts: 0, pages: 0, categories: 0 };
   }
 };

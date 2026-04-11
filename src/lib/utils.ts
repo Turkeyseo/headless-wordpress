@@ -15,9 +15,15 @@ export function formatDate(dateString: string, locale = 'en'): string {
     });
 }
 
-// Strip HTML tags from content
+// Strip HTML tags from content with better cleanup
 export function stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, '');
+    if (!html) return '';
+    return html
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')   // Remove styles
+        .replace(/<[^>]*>/g, ' ')                                           // Standard tag removal
+        .replace(/\s+/g, ' ')                                               // Collapse whitespace
+        .trim();
 }
 
 // Truncate text to a certain length

@@ -544,6 +544,23 @@ export default function DashboardClient() {
                     {/* Dashboard Tab */}
                     {activeTab === 'dashboard' && (
                         <>
+                            {/* Environment Warning */}
+                            {typeof window !== 'undefined' && 
+                             (window.location.hostname.includes('vercel.app') || 
+                              window.location.hostname.includes('netlify.app')) && (
+                                <div className={styles.envWarningCard}>
+                                    <AlertCircle size={20} />
+                                    <div>
+                                        <p className={styles.envWarningTitle}>Read-Only Environment Detected</p>
+                                        <p className={styles.envWarningDesc}>
+                                            Changes made here are saved to <code>site-config.json</code> but will be lost on the next deployment. 
+                                            To make changes permanent, run this project locally, copy the 
+                                            generated <code>site-config.json</code>, and commit it to your repository.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className={styles.statsGrid}>
                                 <div className={styles.statCard}>
                                     <div className={styles.statIcon}>

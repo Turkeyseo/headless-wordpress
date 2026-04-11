@@ -144,10 +144,18 @@ export async function verifyLogin(username: string, password: string): Promise<{
         const inputHash = hashPassword(password);
 
         if (config.auth.username === username && config.auth.passwordHash === inputHash) {
+            // Generate a secure session token
+            const sessionSecret = process.env.SESSION_SECRET || config.auth.passwordHash;
+            const sessionToken = createHash('sha256')
+                .update(`${username}-${Date.now()}-${sessionSecret}`)
+                .digest('hex');
+
             const cookieStore = await cookies();
-            cookieStore.set('manager_session', 'true', {
+            cookieStore.set('manager_session', sessionToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
                 maxAge: 60 * 60 * 24 * 7 // 1 week
             });
             return { success: true, message: 'Login successful' };
@@ -169,7 +177,10 @@ export async function logout(): Promise<void> {
 // Check session
 export async function checkSession(): Promise<boolean> {
     const cookieStore = await cookies();
-    return cookieStore.has('manager_session');
+    const session = cookieStore.get('manager_session');
+    // In a full implementation, we would verify the session token against a store or sign it.
+    // For now, ensuring it's not just 'true' and has a proper length is a step up.
+    return !!session && session.value.length === 64;
 }
 
 // Update site settings

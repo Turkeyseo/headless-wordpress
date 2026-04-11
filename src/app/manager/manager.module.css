@@ -281,6 +281,37 @@
     background: currentColor;
 }
 
+/* Environment Warning */
+.envWarningCard {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(245, 166, 35, 0.05);
+    border: 1px solid rgba(245, 166, 35, 0.2);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    color: var(--manager-warning);
+}
+
+.envWarningTitle {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.envWarningDesc {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--manager-muted);
+}
+
+.envWarningDesc code {
+    background: #222;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    color: #eee;
+}
+
 /* Content Area */
 .contentArea {
     flex: 1;

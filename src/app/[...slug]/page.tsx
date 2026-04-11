@@ -208,22 +208,23 @@ export default async function SlugPage({ params }: PageProps) {
         contentAfterTOC = contentWithIds;
     }
 
-    // Get related posts if this is a post
-    let relatedPosts: Awaited<ReturnType<typeof getRelatedPosts>> = [];
-    if (isPost && post?.categories?.nodes) {
-        const categoryIds = post.categories.nodes.map((c: { databaseId: number }) => c.databaseId);
-        const relatedLimit = config.postSettings?.relatedPosts?.count || 3;
-        relatedPosts = await getRelatedPosts(config.wordpressUrl, post.id, categoryIds, relatedLimit);
-    }
-
-    // Fetch comments
-    const comments = (isPost && config.plugins?.comments?.enabled) ? await getComments(config.wordpressUrl, post!.databaseId) : [];
-
-    // Fetch ACF Data
-    let acfData = null;
-    if (isPost && config.plugins?.acf?.enabled) {
-        acfData = await getPostAcfData(config.wordpressUrl, post!.databaseId);
-    }
+    // Parallel fetch secondary data
+    const [relatedPosts, comments, acfData] = await Promise.all([
+        isPost && post?.categories?.nodes
+            ? getRelatedPosts(
+                config.wordpressUrl,
+                post.id,
+                post.categories.nodes.map((c: any) => c.databaseId),
+                config.postSettings?.relatedPosts?.count || 3
+            )
+            : Promise.resolve([]),
+        (isPost && config.plugins?.comments?.enabled)
+            ? getComments(config.wordpressUrl, post!.databaseId)
+            : Promise.resolve([]),
+        (isPost && config.plugins?.acf?.enabled)
+            ? getPostAcfData(config.wordpressUrl, post!.databaseId)
+            : Promise.resolve(null),
+    ]);
 
     // Share functionality can be added in the future
 
