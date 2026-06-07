@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Element, domToReact, HTMLReactParserOptions } from 'html-react-parser';
+import { Element, Text, domToReact, HTMLReactParserOptions, DOMNode } from 'html-react-parser';
 import ImageWithLightbox from '@/components/ui/ImageWithLightbox';
 import GalleryGrid, { GalleryImage } from '@/components/ui/GalleryGrid';
 
@@ -18,14 +18,14 @@ function getGalleryColumns(domNode: Element): 1 | 2 | 3 | 4 {
 /**
  * Recursively finds all img elements in a DOM node tree
  */
-function findAllImages(node: any): any[] {
-    let images: any[] = [];
-    if (node.name === 'img') {
-        images.push(node);
-    }
-    if (node.children && Array.isArray(node.children)) {
-        node.children.forEach((child: any) => {
-            images = images.concat(findAllImages(child));
+function findAllImages(node: DOMNode): Element[] {
+    let images: Element[] = [];
+    if (node instanceof Element) {
+        if (node.name === 'img') {
+            images.push(node);
+        }
+        node.children.forEach((child) => {
+            images = images.concat(findAllImages(child as DOMNode));
         });
     }
     return images;
@@ -34,7 +34,7 @@ function findAllImages(node: any): any[] {
 /**
  * Extracts image data from an img node
  */
-function extractImageData(img: any): GalleryImage {
+function extractImageData(img: Element): GalleryImage {
     return {
         src: img.attribs.src || '',
         alt: img.attribs.alt || '',
@@ -64,18 +64,21 @@ function isGalleryContainer(domNode: Element): boolean {
 function isPseudoGalleryParagraph(domNode: Element): boolean {
     if (domNode.name !== 'p' || !domNode.children?.length) return false;
 
-    return domNode.children.every((child: any) => {
+    return domNode.children.every((child) => {
         // Allow empty text nodes
-        if (child.type === 'text') return !child.data.trim();
-        // Allow br tags
-        if (child.name === 'br') return true;
-        // Allow img tags
-        if (child.name === 'img') return true;
-        // Allow anchor tags containing only images
-        if (child.name === 'a') {
-            return child.children?.every((grandChild: any) =>
-                grandChild.name === 'img' || (grandChild.type === 'text' && !grandChild.data.trim())
-            );
+        if (child instanceof Text) return !child.data.trim();
+        if (child instanceof Element) {
+            // Allow br tags
+            if (child.name === 'br') return true;
+            // Allow img tags
+            if (child.name === 'img') return true;
+            // Allow anchor tags containing only images
+            if (child.name === 'a') {
+                return child.children?.every((grandChild) =>
+                    (grandChild instanceof Element && grandChild.name === 'img') ||
+                    (grandChild instanceof Text && !grandChild.data.trim())
+                );
+            }
         }
         return false;
     });
@@ -145,7 +148,7 @@ export const gutenbergOptions: HTMLReactParserOptions = {
             if (href && href.startsWith('/') && !href.startsWith('//')) {
                 return (
                     <Link href={href} className={className}>
-                        {domToReact(domNode.children as any, gutenbergOptions)}
+                        {domToReact(domNode.children as DOMNode[], gutenbergOptions)}
                     </Link>
                 );
             }
@@ -186,7 +189,7 @@ export const gutenbergOptions: HTMLReactParserOptions = {
             const existingClass = domNode.attribs?.class || '';
             return (
                 <pre className={`${existingClass} overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100`}>
-                    {domToReact(domNode.children as any, gutenbergOptions)}
+                    {domToReact(domNode.children as DOMNode[], gutenbergOptions)}
                 </pre>
             );
         }
@@ -196,7 +199,7 @@ export const gutenbergOptions: HTMLReactParserOptions = {
             const existingClass = domNode.attribs?.class || '';
             return (
                 <blockquote className={`${existingClass} border-l-4 border-primary pl-4 italic my-6`}>
-                    {domToReact(domNode.children as any, gutenbergOptions)}
+                    {domToReact(domNode.children as DOMNode[], gutenbergOptions)}
                 </blockquote>
             );
         }
@@ -207,7 +210,7 @@ export const gutenbergOptions: HTMLReactParserOptions = {
             return (
                 <div className="overflow-x-auto my-6">
                     <table className={`${existingClass} min-w-full border-collapse`}>
-                        {domToReact(domNode.children as any, gutenbergOptions)}
+                        {domToReact(domNode.children as DOMNode[], gutenbergOptions)}
                     </table>
                 </div>
             );

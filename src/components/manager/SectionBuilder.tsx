@@ -525,7 +525,7 @@ function PostsEditor({ section, onChange, categories }: { section: PostsSection;
                 <div className={styles.field}>
                     <label className={styles.checkbox}>
                         <input type="checkbox" checked={section.showViewAll} onChange={e => onChange({ showViewAll: e.target.checked })} />
-                        Show "View All" link
+                        Show &quot;View All&quot; link
                     </label>
                 </div>
                 <div className={styles.field}>

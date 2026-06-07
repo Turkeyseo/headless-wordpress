@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { X } from 'lucide-react';
+
+// Stable no-op subscription: the snapshot never changes after hydration, so we
+// only need it to read true on the client and false on the server.
+const emptySubscribe = () => () => {};
 
 interface ImageWithLightboxProps {
     src: string;
@@ -29,11 +33,10 @@ export default function ImageWithLightbox({
     sizes
 }: ImageWithLightboxProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    // Client-only flag (replaces the mounted-state-in-effect pattern). Renders
+    // false during SSR/first paint, then true on the client — safe for the
+    // createPortal(document.body) call below.
+    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
     // Handle body scroll lock when lightbox is open
     useEffect(() => {

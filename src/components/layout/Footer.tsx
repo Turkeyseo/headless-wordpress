@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { SiteConfig, MenuItem } from '@/lib/config';
+import { SiteConfig } from '@/lib/config';
 import styles from './Footer.module.css';
 import AdUnit from '@/components/AdUnit';
-import { getPosts, getCategories } from '@/lib/wordpress';
+import { getPosts, getCategories, WPPost, WPCategory } from '@/lib/wordpress';
 import { formatDate } from '@/lib/utils';
 
 interface FooterProps {
@@ -82,8 +82,8 @@ export default async function Footer({ config }: FooterProps) {
     const currentYear = new Date().getFullYear();
 
     // Fetch dynamic content
-    let latestPosts: any[] = [];
-    let topCategories: any[] = [];
+    let latestPosts: WPPost[] = [];
+    let topCategories: WPCategory[] = [];
 
     if (config.wordpressUrl) {
         try {
@@ -142,7 +142,7 @@ export default async function Footer({ config }: FooterProps) {
                         <h4>Top Categories</h4>
                         <ul className={styles.footerNavList}>
                             {topCategories.length > 0 ? (
-                                topCategories.map((cat: any) => (
+                                topCategories.map((cat: WPCategory) => (
                                     <li key={cat.id}>
                                         <Link href={`/category/${cat.slug}`} className={styles.footerNavLink}>
                                             {cat.name} {cat.count ? `(${cat.count})` : ''}

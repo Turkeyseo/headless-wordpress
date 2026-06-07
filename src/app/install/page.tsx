@@ -35,7 +35,7 @@ const generateDefaultSections = (categories: WPCategory[]): HomepageSection[] =>
     ];
 
     sorted.forEach((cat, index) => {
-        let type: any = layouts[index % layouts.length];
+        let type: PostsSection['type'] = layouts[index % layouts.length];
         let postCount = 6;
         let columns = 3;
 

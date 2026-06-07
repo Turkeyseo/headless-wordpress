@@ -20,7 +20,7 @@ interface HelpDocumentationProps {
 
 type DocSection = 'intro' | 'plugins' | 'theme' | 'security' | 'api';
 
-export default function HelpDocumentation({ config }: HelpDocumentationProps) {
+export default function HelpDocumentation({}: HelpDocumentationProps) {
     const [activeSection, setActiveSection] = useState<DocSection>('plugins');
 
     const containerStyle: React.CSSProperties = {
@@ -166,7 +166,7 @@ export default function HelpDocumentation({ config }: HelpDocumentationProps) {
                                             Find Form ID
                                         </h4>
                                         <p style={{ fontSize: '0.9rem', color: 'var(--manager-muted)', marginLeft: '2rem' }}>
-                                            In WP Admin &gt; Contact, look for shortcode: <code>[contact-form-7 id="123"...]</code>. ID is <strong>123</strong>.
+                                            In WP Admin &gt; Contact, look for shortcode: <code>[contact-form-7 id=&quot;123&quot;...]</code>. ID is <strong>123</strong>.
                                         </p>
                                     </div>
                                     <div>
@@ -210,7 +210,7 @@ export default function HelpDocumentation({ config }: HelpDocumentationProps) {
                                     <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                         <AlertCircle size={16} /> Requirement:
                                     </strong>
-                                    Enable "Show in REST API" in your ACF Field Group settings.
+                                    Enable &quot;Show in REST API&quot; in your ACF Field Group settings.
                                 </div>
                                 <p style={{ fontSize: '0.9rem' }}>
                                     Enable this feature in the <strong>Integrations</strong> tab.

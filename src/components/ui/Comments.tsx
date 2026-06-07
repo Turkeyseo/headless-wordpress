@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { WPComment } from '@/lib/wordpress';
 import { postCommentAction } from '@/lib/actions';
 import styles from './Comments.module.css';
@@ -33,9 +34,9 @@ export default function Comments({ postId, comments: initialComments }: Comments
                 if (res.comment) {
                     // Check if it's approved (property might be missing in type but exists in graphQL)
                     // For now, if we get it back, we show it or just show success msg
-                    // @ts-ignore
-                    if (res.comment.approved) {
-                        setComments([...comments, res.comment]);
+                    const returnedComment = res.comment as WPComment & { approved?: boolean };
+                    if (returnedComment.approved) {
+                        setComments([...comments, returnedComment]);
                     }
                 }
                 setSuccess('Your comment has been submitted and is awaiting moderation.');
@@ -43,8 +44,8 @@ export default function Comments({ postId, comments: initialComments }: Comments
             } else {
                 setError(res.message);
             }
-        } catch (err: any) {
-            setError(err.message || 'An error occurred.');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred.');
         } finally {
             setIsSubmitting(false);
         }
@@ -66,7 +67,12 @@ export default function Comments({ postId, comments: initialComments }: Comments
                             <div className={styles.commentHeader}>
                                 <div className={styles.avatar}>
                                     {comment.author?.node?.avatar?.url ? (
-                                        <img src={comment.author.node.avatar.url} alt={comment.author.node.name} />
+                                        <Image
+                                            src={comment.author.node.avatar.url}
+                                            alt={comment.author.node.name}
+                                            width={40}
+                                            height={40}
+                                        />
                                     ) : (
                                         <User size={20} />
                                     )}

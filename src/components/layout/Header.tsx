@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Menu, X, Loader2, ArrowRight, Circle, Twitter, Facebook, Instagram, Youtube, Linkedin, ChevronDown } from 'lucide-react';
+import { Search, Menu, X, Loader2, Circle, Twitter, Facebook, Instagram, Youtube, Linkedin, ChevronDown } from 'lucide-react';
 import { SiteConfig, MenuItem } from '@/lib/config';
 import { debounce, stripHtml, truncate } from '@/lib/utils';
 import styles from './Header.module.css';

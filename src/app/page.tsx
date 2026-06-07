@@ -1,8 +1,7 @@
 import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Globe } from 'lucide-react';
-import { getSiteConfig, getEnhancedSiteConfig, HomepageSection, PostsSection, CategoryTabsSection, MenuItem } from '@/lib/config';
+import { getEnhancedSiteConfig, HomepageSection, PostsSection, CategoryTabsSection } from '@/lib/config';
 import { getPosts, getCategories, WPPost, WPCategory } from '@/lib/wordpress';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';

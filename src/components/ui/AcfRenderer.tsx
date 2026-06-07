@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface AcfRendererProps {
-    data: Record<string, any>;
+    data: Record<string, unknown>;
     className?: string;
 }
 
@@ -9,7 +9,7 @@ export default function AcfRenderer({ data, className }: AcfRendererProps) {
     if (!data || Object.keys(data).length === 0) return null;
 
     // Filter out complex objects or empty values for this basic renderer
-    const displayableEntries = Object.entries(data).filter(([_, value]) => {
+    const displayableEntries = Object.entries(data).filter(([, value]) => {
         return value !== null && value !== '' && typeof value !== 'object';
     });
 

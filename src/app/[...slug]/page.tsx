@@ -6,7 +6,7 @@ import { gutenbergOptions } from '@/lib/gutenberg';
 import { Clock, FileQuestion, MapPin } from 'lucide-react';
 import parse from 'html-react-parser';
 import { getSiteConfig, getEnhancedSiteConfig } from '@/lib/config';
-import { getPostBySlug, getPageBySlug, getRelatedPosts, getCategories, getPosts, getTags, getComments, getPostAcfData } from '@/lib/wordpress';
+import { getPostBySlug, getPageBySlug, getRelatedPosts, getCategories, getPosts, getTags, getComments, getPostAcfData, WPPost, WPCategory } from '@/lib/wordpress';
 import { processContentForGalleries } from '@/lib/content-processor';
 import { formatDate, extractTableOfContents, addHeadingIds, calculateReadingTime, stripHtml } from '@/lib/utils';
 import Header from '@/components/layout/Header';
@@ -214,7 +214,7 @@ export default async function SlugPage({ params }: PageProps) {
             ? getRelatedPosts(
                 config.wordpressUrl,
                 post.id,
-                post.categories.nodes.map((c: any) => c.databaseId),
+                post.categories.nodes.map((c: WPCategory) => c.databaseId),
                 config.postSettings?.relatedPosts?.count || 3
             )
             : Promise.resolve([]),
@@ -388,7 +388,7 @@ export default async function SlugPage({ params }: PageProps) {
                     <section className={styles.relatedSection}>
                         <h2 className={styles.relatedTitle}>{config.postSettings?.relatedPosts?.title || 'Related Posts'}</h2>
                         <div className={styles.relatedGrid}>
-                            {relatedPosts.map((relatedPost: any) => (
+                            {relatedPosts.map((relatedPost: WPPost) => (
                                 <PostCard key={relatedPost.id} post={relatedPost} />
                             ))}
                         </div>

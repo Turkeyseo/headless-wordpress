@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import { getSiteConfig, getEnhancedSiteConfig } from '@/lib/config';
-import { getCategories, getPosts, WPCategory } from '@/lib/wordpress';
+import { getCategories, getPosts } from '@/lib/wordpress';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PostGrid from '@/components/ui/PostGrid';

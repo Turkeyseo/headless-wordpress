@@ -1,6 +1,18 @@
 import { GraphQLClient, gql } from 'graphql-request';
-import fs from 'fs';
-import path from 'path';
+
+// Shape of a graphql-request ClientError carrying GraphQL errors in its response.
+interface GraphQLErrorResponse {
+  response?: { errors?: { message?: string }[] };
+}
+
+// Extracts the most relevant message from an unknown error thrown by the
+// GraphQL client: prefers the first GraphQL error, then the Error message.
+const getGraphQLErrorMessage = (e: unknown): string | undefined => {
+  const gqlMessage = (e as GraphQLErrorResponse)?.response?.errors?.[0]?.message;
+  if (gqlMessage) return gqlMessage;
+  if (e instanceof Error) return e.message;
+  return undefined;
+};
 
 // Types
 export interface WPPost {
@@ -129,6 +141,14 @@ export interface WPSiteInfo {
     description: string;
     url: string;
   };
+}
+
+// A single invalid field entry returned by the Contact Form 7 REST API.
+export interface CF7InvalidField {
+  field: string;
+  message: string;
+  idref?: string | null;
+  error_id?: string;
 }
 
 // GraphQL Fragments
@@ -503,7 +523,7 @@ export const getSiteCounts = async (wpUrl: string): Promise<{ posts: number; pag
       if (!res.ok) return 0;
       const total = res.headers.get('x-wp-total');
       return total ? parseInt(total, 10) : 0;
-    } catch (e) {
+    } catch {
       return 0;
     }
   };
@@ -515,7 +535,7 @@ export const getSiteCounts = async (wpUrl: string): Promise<{ posts: number; pag
       getCount('categories'),
     ]);
     return { posts, pages, categories };
-  } catch (error) {
+  } catch {
     return { posts: 0, pages: 0, categories: 0 };
   }
 };
@@ -593,7 +613,9 @@ export const createComment = async (
     `;
 
   try {
-    const data = await client.request<any>(mutation, {
+    const data = await client.request<{
+      createComment?: { success?: boolean; comment?: WPComment };
+    }>(mutation, {
       input: {
         commentOn: input.postId,
         content: input.content,
@@ -608,9 +630,9 @@ export const createComment = async (
       return { success: true, message: 'Comment submitted successfully', comment: data.createComment.comment };
     }
     return { success: false, message: 'Failed to submit comment' };
-  } catch (e: any) {
+  } catch (e) {
     console.error('Error creating comment:', e);
-    const errorMsg = e.response?.errors?.[0]?.message || e.message || 'Unknown error';
+    const errorMsg = getGraphQLErrorMessage(e) || 'Unknown error';
     return { success: false, message: errorMsg };
   }
 };
@@ -620,7 +642,7 @@ export const submitContactForm7 = async (
   wpUrl: string,
   formId: string,
   formData: FormData
-): Promise<{ success: boolean; message: string; invalidFields?: any[] }> => {
+): Promise<{ success: boolean; message: string; invalidFields?: CF7InvalidField[] }> => {
   // Construct REST API base URL
   const baseUrl = wpUrl.replace(/\/graphql\/?$/, '').replace(/\/$/, '');
   const endpoint = `${baseUrl}/wp-json/contact-form-7/v1/contact-forms/${formId}/feedback`;
@@ -631,21 +653,25 @@ export const submitContactForm7 = async (
       body: formData,
     });
 
-    const data = await res.json();
+    const data: {
+      status?: string;
+      message: string;
+      invalid_fields?: CF7InvalidField[];
+    } = await res.json();
 
     if (data.status === 'mail_sent') {
       return { success: true, message: data.message };
     } else {
       return { success: false, message: data.message, invalidFields: data.invalid_fields };
     }
-  } catch (e: any) {
+  } catch (e) {
     console.error('Error submitting CF7:', e);
-    return { success: false, message: e.message || 'Error submitting form' };
+    return { success: false, message: e instanceof Error ? e.message : 'Error submitting form' };
   }
 };
 
 // Fetch ACF Data via REST API
-export const getPostAcfData = async (wpUrl: string, postId: number): Promise<Record<string, any> | null> => {
+export const getPostAcfData = async (wpUrl: string, postId: number): Promise<Record<string, unknown> | null> => {
 
   // Clean up URL to get base
   const baseUrl = wpUrl.replace(/\/graphql\/?$/, '').replace(/\/$/, '');

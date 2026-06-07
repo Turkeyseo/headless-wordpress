@@ -29,6 +29,29 @@ interface RichEditorProps {
     minHeight?: number;
 }
 
+// Declared at module scope (not inside render) so it keeps a stable identity
+// across renders — see react-hooks/static-components.
+function ToolbarButton({
+    onClick,
+    icon: Icon,
+    title
+}: {
+    onClick: () => void;
+    icon: React.ElementType;
+    title: string;
+}) {
+    return (
+        <button
+            type="button"
+            className={styles.toolbarButton}
+            onClick={onClick}
+            title={title}
+        >
+            <Icon size={16} />
+        </button>
+    );
+}
+
 export default function RichEditor({
     value,
     onChange,
@@ -107,25 +130,6 @@ export default function RichEditor({
             execCommand('insertHTML', `<img src="${url}" alt="" style="max-width: 100%; height: auto;" />`);
         }
     };
-
-    const ToolbarButton = ({
-        onClick,
-        icon: Icon,
-        title
-    }: {
-        onClick: () => void;
-        icon: React.ElementType;
-        title: string;
-    }) => (
-        <button
-            type="button"
-            className={styles.toolbarButton}
-            onClick={onClick}
-            title={title}
-        >
-            <Icon size={16} />
-        </button>
-    );
 
     return (
         <div className={styles.editorContainer}>

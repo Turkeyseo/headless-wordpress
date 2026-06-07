@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -117,7 +118,7 @@ export default function DashboardClient() {
 
     // ... (loadConfig ve handleSync fonksiyonları)
 
-    const checkUpdates = async () => {
+    const checkUpdates = useCallback(async () => {
         setUpdateInfo(prev => ({ ...prev, isChecking: true, error: undefined }));
         try {
             const [versionInfo, updateCheck, hasBackup, preflight] = await Promise.all([
@@ -140,14 +141,14 @@ export default function DashboardClient() {
                 preflightWarnings: preflight.warnings,
                 error: updateCheck.error
             });
-        } catch (error) {
+        } catch {
             setUpdateInfo(prev => ({
                 ...prev,
                 isChecking: false,
                 error: 'Failed to check for updates'
             }));
         }
-    };
+    }, []);
 
     const handleUpdate = async () => {
         // Pre-flight check
@@ -179,7 +180,7 @@ export default function DashboardClient() {
                     error: result.error || 'Update failed'
                 }));
             }
-        } catch (error) {
+        } catch {
             setUpdateInfo(prev => ({
                 ...prev,
                 isUpdating: false,
@@ -206,7 +207,7 @@ export default function DashboardClient() {
                     error: result.error || 'Rollback failed'
                 }));
             }
-        } catch (error) {
+        } catch {
             setUpdateInfo(prev => ({
                 ...prev,
                 isRollingBack: false,
@@ -247,11 +248,7 @@ export default function DashboardClient() {
         author: 'Author'
     });
 
-    useEffect(() => {
-        loadConfig();
-    }, []);
-
-    const loadConfig = async () => {
+    const loadConfig = useCallback(async () => {
         setIsLoading(true);
         try {
             const cfg = await getConfig();
@@ -320,7 +317,11 @@ export default function DashboardClient() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [checkUpdates]);
+
+    useEffect(() => {
+        loadConfig();
+    }, [loadConfig]);
 
 
 
@@ -677,7 +678,7 @@ export default function DashboardClient() {
                                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                                 {logoUrl && (
                                                     <div style={{ width: 48, height: 48, flexShrink: 0, position: 'relative', border: '1px solid var(--manager-border)', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
-                                                        <img src={logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                        <Image src={logoUrl} alt="Logo" fill unoptimized style={{ objectFit: 'contain' }} />
                                                     </div>
                                                 )}
                                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -721,7 +722,7 @@ export default function DashboardClient() {
                                         <div>
                                             <p style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Clear Application Cache</p>
                                             <p style={{ fontSize: '0.85rem', color: 'var(--manager-muted)' }}>
-                                                Revalidate all static pages and fetched data. Use this if your changes aren't showing up.
+                                                Revalidate all static pages and fetched data. Use this if your changes aren&apos;t showing up.
                                             </p>
                                         </div>
                                         <button
@@ -1814,11 +1815,11 @@ export default function DashboardClient() {
                                         <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Integration Guide:</strong>
                                         <ol style={{ paddingLeft: '1.25rem', margin: '0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             <li>Create a form in WordPress Admin (Contact &gt; Contact Forms).</li>
-                                            <li>Locate the <strong>ID</strong> in the shortcode. Example: <code>[contact-form-7 id="123" ...]</code> means ID is <strong>123</strong>.</li>
+                                            <li>Locate the <strong>ID</strong> in the shortcode. Example: <code>[contact-form-7 id=&quot;123&quot; ...]</code> means ID is <strong>123</strong>.</li>
                                             <li>Use the standard form component in your pages or the dedicated Contact Form section (coming soon).</li>
                                         </ol>
                                         <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--manager-border)' }}>
-                                            <code style={{ background: 'var(--manager-bg)', padding: '0.2rem 0.4rem', borderRadius: '4px', fontSize: '0.85rem' }}>&lt;ContactForm7 formId="123" /&gt;</code> component is available for developers.
+                                            <code style={{ background: 'var(--manager-bg)', padding: '0.2rem 0.4rem', borderRadius: '4px', fontSize: '0.85rem' }}>&lt;ContactForm7 formId=&quot;123&quot; /&gt;</code> component is available for developers.
                                         </div>
                                     </div>
                                 </div>
@@ -1999,7 +2000,7 @@ export default function DashboardClient() {
                                                         ...config!,
                                                         plugins: {
                                                             ...currentPlugins,
-                                                            seo: { ...currentSeo, provider: e.target.value as any }
+                                                            seo: { ...currentSeo, provider: e.target.value as 'yoast' | 'rankmath' | 'default' }
                                                         }
                                                     });
                                                 }}
@@ -2091,7 +2092,7 @@ function SecurityTab() {
             } else {
                 setMessage({ type: 'error', text: result.message });
             }
-        } catch (error) {
+        } catch {
             setMessage({ type: 'error', text: 'An unexpected error occurred' });
         } finally {
             setIsLoading(false);

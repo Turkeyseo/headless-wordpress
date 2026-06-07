@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { LocalPage } from '@/lib/config-types';
 import { getLocalPages, saveLocalPage, deleteLocalPage, getWordPressPagesList } from '@/lib/actions';
-import { Loader2, Plus, Edit, Trash2, ExternalLink, Globe, FileText, Check, X } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, ExternalLink, Globe, FileText, Check } from 'lucide-react';
 import styles from '@/app/manager/manager.module.css';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -39,28 +39,41 @@ export default function PagesManager({ onSave }: PagesManagerProps) {
     const [activeTab, setActiveTab] = useState<'local' | 'wordpress'>('local');
     const [localPages, setLocalPages] = useState<LocalPage[]>([]);
     const [wpPages, setWpPages] = useState<{ id: string; title: string; slug: string; link: string; date: string }[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    // Tracks which tab's data is currently loaded; isLoading is derived from it
+    // so the load effect never calls setState synchronously
+    // (react-hooks/set-state-in-effect).
+    const [loadedTab, setLoadedTab] = useState<'local' | 'wordpress' | null>(null);
+    const isLoading = loadedTab !== activeTab;
 
     // Editor State
     const [isEditing, setIsEditing] = useState(false);
     const [currentPage, setCurrentPage] = useState<LocalPage | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        loadPages();
-    }, [activeTab]);
+    // Bumping this re-runs the load effect (used to refresh after save/delete).
+    const [reloadKey, setReloadKey] = useState(0);
+    const refresh = () => setReloadKey((k) => k + 1);
 
-    const loadPages = async () => {
-        setIsLoading(true);
-        if (activeTab === 'local') {
-            const pages = await getLocalPages();
-            setLocalPages(pages);
-        } else {
-            const pages = await getWordPressPagesList();
-            setWpPages(pages);
-        }
-        setIsLoading(false);
-    };
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            if (activeTab === 'local') {
+                const pages = await getLocalPages();
+                if (!cancelled) setLocalPages(pages);
+            } else {
+                const pages = await getWordPressPagesList();
+                if (!cancelled) setWpPages(pages);
+            }
+            // setState happens only after awaiting (and only if still mounted),
+            // keeping the effect free of synchronous setState
+            // (react-hooks/set-state-in-effect). The cancel guard also avoids
+            // races when the tab is switched mid-fetch.
+            if (!cancelled) setLoadedTab(activeTab);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab, reloadKey]);
 
     const handleCreateNew = () => {
         setCurrentPage({
@@ -83,7 +96,7 @@ export default function PagesManager({ onSave }: PagesManagerProps) {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this page?')) return;
         await deleteLocalPage(id);
-        loadPages();
+        refresh();
     };
 
     const handleSavePage = async (e: React.FormEvent) => {
@@ -97,7 +110,7 @@ export default function PagesManager({ onSave }: PagesManagerProps) {
         await saveLocalPage({ ...currentPage, slug: cleanSlug });
         setIsSaving(false);
         setIsEditing(false);
-        loadPages();
+        refresh();
         onSave(); // Trigger toast
     };
 

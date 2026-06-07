@@ -26,6 +26,10 @@ interface ContactForm7Props {
     submitLabel?: string;
 }
 
+// Possible values held in the form state: text inputs (string),
+// multi-select checkboxes (string[]), file uploads (File), or cleared (null).
+type FieldValue = string | string[] | File | null;
+
 const DEFAULT_FIELDS: FormField[] = [
     { name: 'your-name', type: 'text', label: 'Name', required: true },
     { name: 'your-email', type: 'email', label: 'Email', required: true },
@@ -35,8 +39,8 @@ const DEFAULT_FIELDS: FormField[] = [
 
 export default function ContactForm7({ formId, fields = DEFAULT_FIELDS, className, submitLabel = 'Send Message' }: ContactForm7Props) {
     // Initialize form state
-    const [formData, setFormData] = useState<Record<string, any>>(() => {
-        const initial: Record<string, any> = {};
+    const [formData, setFormData] = useState<Record<string, FieldValue>>(() => {
+        const initial: Record<string, FieldValue> = {};
         fields.forEach(field => {
             if (field.type === 'checkbox') {
                 initial[field.name] = field.defaultValue || [];
@@ -63,7 +67,7 @@ export default function ContactForm7({ formId, fields = DEFAULT_FIELDS, classNam
             } else if (value instanceof File) {
                 data.append(key, value);
             } else {
-                data.append(key, value);
+                data.append(key, value ?? '');
             }
         });
 
@@ -73,7 +77,7 @@ export default function ContactForm7({ formId, fields = DEFAULT_FIELDS, classNam
             setStatus('success');
             setMessage(res.message);
             // Reset form
-            const resetData: Record<string, any> = {};
+            const resetData: Record<string, FieldValue> = {};
             fields.forEach(field => {
                 resetData[field.name] = field.type === 'checkbox' ? [] : '';
             });
@@ -88,7 +92,7 @@ export default function ContactForm7({ formId, fields = DEFAULT_FIELDS, classNam
         }
     };
 
-    const handleChange = (name: string, value: any) => {
+    const handleChange = (name: string, value: FieldValue) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -175,7 +179,7 @@ export default function ContactForm7({ formId, fields = DEFAULT_FIELDS, classNam
                                     value={opt}
                                     className={styles.radio}
                                     checked={formData[field.name] === opt}
-                                    onChange={e => handleChange(field.name, opt)}
+                                    onChange={() => handleChange(field.name, opt)}
                                     required={field.required}
                                 />
                                 {opt}

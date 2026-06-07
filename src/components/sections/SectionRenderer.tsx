@@ -35,7 +35,7 @@ import { useState, useEffect } from 'react';
 import PostGrid from '@/components/ui/PostGrid';
 import styles from './SectionRenderer.module.css';
 import {
-    Check, ChevronDown, ChevronUp, Plus, Minus, Mail, Phone, MapPin, Play,
+    Check, Plus, Minus, Mail, Phone, MapPin, Play,
     Zap, Shield, Smartphone, Globe, Lock, Server, Database, Cloud, Cpu,
     Code, Terminal, Layout, Activity, TrendingUp, BarChart, PieChart,
     Users, User, Rocket, Target, Award

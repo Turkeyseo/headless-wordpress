@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import { SiteConfig } from '@/lib/config-types';
-import { WPCategory, WPPost } from '@/lib/wordpress';
+import { WPCategory, WPPost, WPTag } from '@/lib/wordpress';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PostGrid from '@/components/ui/PostGrid';
 import styles from '@/app/category/[slug]/category.module.css'; // Importing via absolute path alias might be safer if supported, or relative. Or move CSS.
 
 interface CategoryTemplateProps {
-    category: WPCategory | any; // Accept WPTag as well (they share similar structure)
+    category: WPCategory | WPTag; // Accept WPTag as well (they share similar structure)
     posts: WPPost[];
     config: SiteConfig;
     type?: 'Category' | 'Tag';
