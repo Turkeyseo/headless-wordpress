@@ -73,8 +73,8 @@ export function getCurrentVersion(): VersionInfo {
             version: '0.0.0',
             releaseDate: '',
             channel: 'stable',
-            repository: 'https://github.com/Turkeyseo/headless-wordpress',
-            updateUrl: 'https://api.github.com/repos/Turkeyseo/headless-wordpress/releases/latest'
+            repository: 'https://github.com/Turkeyseo/headlesswordpress',
+            updateUrl: 'https://api.github.com/repos/Turkeyseo/headlesswordpress/releases/latest'
         };
     }
 }

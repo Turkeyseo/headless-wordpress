@@ -11,6 +11,16 @@
 
 ---
 
+## 🆕 What's New in v1.2.0
+
+- 🔐 **Hardened security** — signed, expiring sessions, server-side auth guards on every admin action, and salted scrypt password hashing
+- 🛠️ **Fixed auto-updater** — update checks now point at the correct repository
+- 🧹 **Cleaner codebase** — zero ESLint warnings and stronger TypeScript types throughout
+
+See the full [CHANGELOG](CHANGELOG.md). Built and maintained by [Whspe](https://www.whspe.com).
+
+---
+
 ## ✨ Features
 
 ### 🎯 Core Features

@@ -1,7 +1,7 @@
 {
-    "version": "1.1.69",
-    "releaseDate": "2026-01-12",
+    "version": "1.2.0",
+    "releaseDate": "2026-06-08",
     "channel": "stable",
-    "repository": "https://github.com/Turkeyseo/headless-wordpress",
-    "updateUrl": "https://api.github.com/repos/Turkeyseo/headless-wordpress/releases/latest"
+    "repository": "https://github.com/Turkeyseo/headlesswordpress",
+    "updateUrl": "https://api.github.com/repos/Turkeyseo/headlesswordpress/releases/latest"
 }
