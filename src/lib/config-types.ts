@@ -421,6 +421,9 @@ export interface SiteConfig {
     auth?: {
         username: string;
         passwordHash: string;
+        // Secret used to sign manager session tokens. Generated on install.
+        // Never sent to the client (stripped by getConfig()).
+        sessionSecret?: string;
     };
     gaId?: string;
     seo?: {

@@ -43,5 +43,12 @@ next-env.d.ts
 # Site configuration (contains sensitive data)
 site-config.json
 
-# Debug logs
+# Debug logs / scratch artifacts
 debug_*.log
+raw_page.txt
+
+# Update system backups (created at runtime by the updater)
+.update-backup/
+
+# Editor / tooling
+.qoder/

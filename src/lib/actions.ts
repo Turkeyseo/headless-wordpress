@@ -1,8 +1,17 @@
 'use server';
 
 import { updateSiteConfig, getSiteConfig, SiteConfig, MenuItem, HomepageSection } from './config';
-import { testConnection, checkForElementor, getSiteCounts, getCategories, WPCategory, createComment, submitContactForm7, WPComment } from './wordpress';
+import { testConnection, checkForElementor, getSiteCounts, getCategories, WPCategory, createComment, submitContactForm7, WPComment, CF7InvalidField } from './wordpress';
 import { revalidatePath } from 'next/cache';
+import {
+    hashPassword,
+    verifyPassword,
+    generateSessionSecret,
+    setSessionCookie,
+    clearSessionCookie,
+    getSessionUser,
+    isManagerAuthenticated,
+} from './auth';
 
 // Test WordPress connection
 export async function testWPConnection(url: string): Promise<{
@@ -41,7 +50,7 @@ export async function analyzeWPSite(url: string): Promise<{
             hasElementor: elementorCheck.hasElementor,
             elementorWarning: elementorCheck.warning,
         };
-    } catch (error) {
+    } catch {
         return {
             success: false,
             counts: { posts: 0, pages: 0, categories: 0 },
@@ -49,14 +58,6 @@ export async function analyzeWPSite(url: string): Promise<{
             hasElementor: false,
         };
     }
-}
-
-import { createHash } from 'crypto';
-import { cookies } from 'next/headers';
-
-// Helper to hash password
-function hashPassword(password: string): string {
-    return createHash('sha256').update(password).digest('hex');
 }
 
 // Complete installation
@@ -72,6 +73,16 @@ export async function completeInstallation(data: {
     homepageSections?: HomepageSection[];
 }): Promise<{ success: boolean; message: string }> {
     try {
+        // Re-install guard: once a site is installed and protected by an admin
+        // account, only an authenticated manager may re-run installation.
+        const existing = getSiteConfig();
+        if (existing.installed && existing.auth) {
+            const user = await getSessionUser();
+            if (!user) {
+                return { success: false, message: 'Site already installed' };
+            }
+        }
+
         // Auto-generate primary menu from top categories
         let primaryMenu: MenuItem[] = [];
         try {
@@ -107,18 +118,17 @@ export async function completeInstallation(data: {
             configUpdate.auth = {
                 username: data.adminUser.username,
                 passwordHash: hashPassword(data.adminUser.password),
+                sessionSecret: generateSessionSecret(),
             };
-
-            // Auto login after install
-            const cookieStore = await cookies();
-            cookieStore.set('manager_session', 'true', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 60 * 60 * 24 * 7 // 1 week
-            });
         }
 
         updateSiteConfig(configUpdate);
+
+        // Auto login after install (cookie must be set AFTER the secret is
+        // persisted so the token can be verified on subsequent requests).
+        if (data.adminUser) {
+            await setSessionCookie(data.adminUser.username);
+        }
 
         revalidatePath('/');
         revalidatePath('/manager');
@@ -141,46 +151,41 @@ export async function verifyLogin(username: string, password: string): Promise<{
             return { success: false, message: 'Authentication not configured' };
         }
 
-        const inputHash = hashPassword(password);
+        const { valid, needsUpgrade } = verifyPassword(password, config.auth.passwordHash);
 
-        if (config.auth.username === username && config.auth.passwordHash === inputHash) {
-            // Generate a secure session token
-            const sessionSecret = process.env.SESSION_SECRET || config.auth.passwordHash;
-            const sessionToken = createHash('sha256')
-                .update(`${username}-${Date.now()}-${sessionSecret}`)
-                .digest('hex');
-
-            const cookieStore = await cookies();
-            cookieStore.set('manager_session', sessionToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                path: '/',
-                maxAge: 60 * 60 * 24 * 7 // 1 week
-            });
-            return { success: true, message: 'Login successful' };
+        if (config.auth.username !== username || !valid) {
+            return { success: false, message: 'Invalid credentials' };
         }
 
-        return { success: false, message: 'Invalid credentials' };
-    } catch (error) {
+        // Ensure a signing secret exists (older installs may lack one) and
+        // opportunistically upgrade legacy SHA-256 hashes to salted scrypt.
+        let auth = config.auth;
+        if (!auth.sessionSecret) {
+            auth = { ...auth, sessionSecret: generateSessionSecret() };
+        }
+        if (needsUpgrade) {
+            auth = { ...auth, passwordHash: hashPassword(password) };
+        }
+        if (auth !== config.auth) {
+            updateSiteConfig({ auth });
+        }
+
+        await setSessionCookie(username);
+        return { success: true, message: 'Login successful' };
+    } catch {
         return { success: false, message: 'Login failed' };
     }
 }
 
 // Logout
 export async function logout(): Promise<void> {
-    const cookieStore = await cookies();
-    cookieStore.delete('manager_session');
+    await clearSessionCookie();
     revalidatePath('/manager');
 }
 
-// Check session
+// Check session (verifies the signed token, not just cookie presence)
 export async function checkSession(): Promise<boolean> {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('manager_session');
-    // In a full implementation, we would verify the session token against a store or sign it.
-    // For now, ensuring it's not just 'true' and has a proper length is a step up.
-    return !!session && session.value.length === 64;
+    return (await getSessionUser()) !== null;
 }
 
 // Update site settings
@@ -188,8 +193,15 @@ export async function updateSettings(data: Partial<SiteConfig>): Promise<{
     success: boolean;
     message: string;
 }> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized' };
+    }
     try {
-        updateSiteConfig(data);
+        // Credentials are only changeable through updateAdminCredentials; never
+        // let the generic settings channel overwrite auth or install state.
+        const { auth: _auth, installed: _installed, ...safeData } = data;
+        void _auth; void _installed;
+        updateSiteConfig(safeData);
         revalidatePath('/');
         revalidatePath('/manager');
 
@@ -207,6 +219,9 @@ export async function updateMenu(
     menuType: 'primary' | 'footer',
     items: MenuItem[]
 ): Promise<{ success: boolean; message: string }> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized' };
+    }
     try {
         const config = getSiteConfig();
         const menus = { ...config.menus, [menuType]: items };
@@ -229,6 +244,9 @@ export async function syncCategories(): Promise<{
     categories: WPCategory[];
     message: string;
 }> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, categories: [], message: 'Unauthorized' };
+    }
     try {
         const config = getSiteConfig();
         if (!config.wordpressUrl) {
@@ -288,11 +306,15 @@ export async function revalidateContent(path?: string): Promise<{
 
 // Update admin credentials
 export async function updateAdminCredentials(data: { username: string; password?: string }): Promise<{ success: boolean; message: string }> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized' };
+    }
     try {
         const config = getSiteConfig();
         const auth = {
             username: data.username,
             passwordHash: data.password ? hashPassword(data.password) : config.auth?.passwordHash || '',
+            sessionSecret: config.auth?.sessionSecret || generateSessionSecret(),
         };
 
         updateSiteConfig({ auth });
@@ -318,12 +340,15 @@ export async function getLocalPages(): Promise<LocalPage[]> {
     try {
         const data = await fs.readFile(PAGES_FILE, 'utf-8');
         return JSON.parse(data);
-    } catch (error) {
+    } catch {
         return [];
     }
 }
 
 export async function saveLocalPage(page: LocalPage): Promise<{ success: boolean; message: string }> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized' };
+    }
     try {
         const pages = await getLocalPages();
         const index = pages.findIndex(p => p.id === page.id);
@@ -337,25 +362,29 @@ export async function saveLocalPage(page: LocalPage): Promise<{ success: boolean
         await fs.writeFile(PAGES_FILE, JSON.stringify(pages, null, 2));
         revalidatePath('/[slug]', 'page');
         return { success: true, message: 'Page saved successfully' };
-    } catch (error) {
+    } catch {
         return { success: false, message: 'Failed to save page' };
     }
 }
 
 export async function deleteLocalPage(id: string): Promise<{ success: boolean; message: string }> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized' };
+    }
     try {
         const pages = await getLocalPages();
         const filtered = pages.filter(p => p.id !== id);
         await fs.writeFile(PAGES_FILE, JSON.stringify(filtered, null, 2));
         revalidatePath('/[slug]', 'page');
         return { success: true, message: 'Page deleted successfully' };
-    } catch (error) {
+    } catch {
         return { success: false, message: 'Failed to delete page' };
     }
 }
 
 // Get WordPress Pages for Admin
 export async function getWordPressPagesList(): Promise<{ id: string; title: string; slug: string; link: string; date: string }[]> {
+    if (!(await isManagerAuthenticated())) return [];
     try {
         const config = getSiteConfig();
         if (!config.wordpressUrl) return [];
@@ -398,22 +427,33 @@ export async function getAppVersion(): Promise<VersionInfo> {
 }
 
 export async function performAppUpdate(): Promise<UpdateResult> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized', error: 'Unauthorized', canRollback: false };
+    }
     return await doUpdate();
 }
 
 export async function rollbackAppUpdate(): Promise<UpdateResult> {
+    if (!(await isManagerAuthenticated())) {
+        return { success: false, message: 'Unauthorized', error: 'Unauthorized' };
+    }
     return await doRollback();
 }
 
 export async function getUpdatePreflightCheck(): Promise<PreflightResult> {
+    if (!(await isManagerAuthenticated())) {
+        return { canUpdate: false, issues: ['Unauthorized'], warnings: [] };
+    }
     return preflightCheck();
 }
 
 export async function hasUpdateBackup(): Promise<boolean> {
+    if (!(await isManagerAuthenticated())) return false;
     return hasBackup();
 }
 
 export async function getUpdateBackups(): Promise<{ path: string; date: string; version?: string }[]> {
+    if (!(await isManagerAuthenticated())) return [];
     return listBackups();
 }
 
@@ -426,13 +466,13 @@ export async function postCommentAction(postId: number, content: string, author:
 
     try {
         return await createComment(config.wordpressUrl, { postId, content, author, email, url, parentId });
-    } catch (e: any) {
-        return { success: false, message: e.message || 'Failed to post comment' };
+    } catch (e) {
+        return { success: false, message: e instanceof Error ? e.message : 'Failed to post comment' };
     }
 }
 
 // Submit CF7 Action
-export async function submitCF7Action(formId: string, formData: FormData): Promise<{ success: boolean; message: string; invalidFields?: any[] }> {
+export async function submitCF7Action(formId: string, formData: FormData): Promise<{ success: boolean; message: string; invalidFields?: CF7InvalidField[] }> {
     const config = getSiteConfig();
     if (!config.wordpressUrl) {
         return { success: false, message: 'WordPress URL not configured' };
@@ -440,8 +480,8 @@ export async function submitCF7Action(formId: string, formData: FormData): Promi
 
     try {
         return await submitContactForm7(config.wordpressUrl, formId, formData);
-    } catch (e: any) {
-        return { success: false, message: e.message || 'Failed to submit form' };
+    } catch (e) {
+        return { success: false, message: e instanceof Error ? e.message : 'Failed to submit form' };
     }
 }
 

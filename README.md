@@ -82,6 +82,12 @@ Create a `.env.local` file:
 ```env
 # Optional: Override WordPress URL (otherwise set via admin panel)
 WORDPRESS_URL=https://your-wordpress-site.com
+
+# Recommended in production (see the Security section for details)
+SESSION_SECRET=change-me-to-a-long-random-string
+# REVALIDATION_SECRET=another-random-string
+# NEXT_PUBLIC_IMAGE_HOSTS=cdn.example.com,images.example.org
+# SERVER_ACTION_ORIGINS=your-domain.com
 ```
 
 ---
@@ -188,9 +194,20 @@ npm start
 ## 🔒 Security
 
 - Admin panel is password-protected
-- Credentials stored with bcrypt hashing
+- Passwords stored as **salted scrypt** hashes (legacy SHA-256 hashes are auto-upgraded on next login)
+- Sessions use **HMAC-signed, expiring tokens** (cannot be forged by setting a cookie)
+- Every admin server action and the update endpoint enforce authentication server-side
 - No direct database access from frontend
 - WordPress remains hidden from visitors
+
+### Recommended environment variables for production
+
+| Variable | Purpose |
+|----------|---------|
+| `SESSION_SECRET` | Secret used to sign session tokens. Set a long random value (≥32 chars) — important when running multiple instances. If unset, a per-site secret is generated and stored in `site-config.json`. |
+| `REVALIDATION_SECRET` | When set, the `/api/revalidate` webhook requires this secret in the request body (`{ "secret": "..." }`). |
+| `NEXT_PUBLIC_IMAGE_HOSTS` | Comma-separated extra image hosts to allow through the Next.js image optimizer (your WordPress domain is allowed automatically). |
+| `SERVER_ACTION_ORIGINS` | Comma-separated allowed origins for server actions. Omit to keep the secure same-origin default. |
 
 ---
 

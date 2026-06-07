@@ -20,12 +20,12 @@ export default function LoginPage() {
         setError('');
 
         try {
-            const success = await verifyLogin(username, password);
-            if (success) {
+            const result = await verifyLogin(username, password);
+            if (result.success) {
                 router.refresh(); // Update server components credentials
                 router.push('/manager');
             } else {
-                setError('Invalid username or password');
+                setError(result.message || 'Invalid username or password');
             }
         } catch (err) {
             setError('An error occurred during login');

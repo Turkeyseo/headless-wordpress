@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkForUpdates, performUpdate, getCurrentVersion } from '@/lib/updater';
-import { cookies } from 'next/headers';
-import { getSiteConfig } from '@/lib/config';
+import { isManagerAuthenticated } from '@/lib/auth';
 
 // Check for updates
 export async function GET() {
@@ -25,17 +24,13 @@ export async function GET() {
 // Perform update
 export async function POST(request: Request) {
     try {
-        // Verify authentication
-        const config = getSiteConfig();
-        if (config.auth) {
-            const cookieStore = await cookies();
-            const hasSession = cookieStore.has('manager_session');
-            if (!hasSession) {
-                return NextResponse.json(
-                    { error: 'Unauthorized' },
-                    { status: 401 }
-                );
-            }
+        // Verify authentication (signed session). This endpoint runs
+        // git fetch/reset + npm install, so it must be tightly guarded.
+        if (!(await isManagerAuthenticated())) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
         }
 
         const body = await request.json().catch(() => ({}));

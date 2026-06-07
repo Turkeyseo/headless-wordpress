@@ -8,11 +8,12 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { secret, path } = body;
 
-        // Optional: Add a secret token for security
-        // const expectedSecret = process.env.REVALIDATION_SECRET;
-        // if (secret !== expectedSecret) {
-        //   return NextResponse.json({ error: 'Invalid secret' }, { status: 401 });
-        // }
+        // If REVALIDATION_SECRET is configured, require it. (Left optional so
+        // existing setups keep working; set the env var to lock this down.)
+        const expectedSecret = process.env.REVALIDATION_SECRET;
+        if (expectedSecret && secret !== expectedSecret) {
+            return NextResponse.json({ error: 'Invalid secret' }, { status: 401 });
+        }
 
         await revalidateContent(path);
 
